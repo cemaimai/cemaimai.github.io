@@ -1,0 +1,48 @@
+body {
+	background-color: white;
+    position:relative;
+    top: 80px;
+    left: 150px;
+    right: 150px;
+    font-family: 'Times New Roman', 'Kosugi', sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:link {
+    color: dimgrey;
+}
+
+a:visited {
+    color: dimgrey;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: crimson;
+}
+
+hr {
+    width: 800px;
+    text-align: left;
+    margin-left: 0;
+}
+
+h2 {
+    margin-left: 20px;
+    width: 770px;
+    color: #fff;
+    background-color: dimgrey;
+    background: linear-gradient(90deg, #222, #fff);
+}
+
+h3 {
+    margin-left: 40px;
+}
+
+.text {
+    margin-left: 40px;
+    width: 700px;
+}
