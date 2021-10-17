@@ -29,6 +29,10 @@ hr {
     margin-left: 0;
 }
 
+h1 {
+    padding-top: 30px;
+}
+
 h2 {
     margin-left: 20px;
     padding-left: 15px;
@@ -46,9 +50,9 @@ summary {
     padding-top: 5px;
     padding-left: 10px;
     padding-bottom: 5px;
-    width: 100px;
+    width: 100%;
     color: #fff;
-    background: linear-gradient(90deg, #e20a0a, #222, #555, #fff);
+    background: linear-gradient(90deg, #e20a0a, #222, #777, #fff);
 }
 
 ul {
@@ -56,10 +60,18 @@ ul {
 }
 
 .index {
-    margin-top: 10px;
-    margin-left: 23px;
-    width: 720px;
+    /* margin-top: 10px;
+    margin-left: 23px; */
+    padding-top: 10px;
+    padding-left: 30px;
+    padding-bottom: 10px;
+    width: 300px;
     line-height: 1.5;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    color: dimgrey;
+    background-color: rgba(255, 255, 255,0.9);
+    font-weight: bold;
 }
 
 .text {
@@ -67,6 +79,28 @@ ul {
     width: 700px;
 }
 
-.center {
+.header {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+.body {
+    padding: 10px 0 20px 0;    /* 上下に20pxを余白を取る */
+}
+
+.footer {
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    padding-top: 5px;
+    padding-bottom: 5px;
     text-align: center;
+    color: #fff;
+    background-color: #222;
+    background: linear-gradient(90deg, #fff, #777, #222, #e20a0a);
 }
