@@ -199,14 +199,56 @@ iframe {
 /* Responsive */
 @media (max-width: 768px) {
     .body {
-        padding-top: 60px;
+        padding: 70px 16px 80px;
     }
 
     h1 {
         font-size: 1.75rem;
+        margin-top: 40px;
     }
 
     h2 {
         font-size: 1.3rem;
+        margin-top: 32px;
+        border-left-width: 4px;
+        padding-left: 12px;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+    }
+
+    /* Larger touch target for hamburger menu */
+    .hamburger-menu {
+        width: 32px;
+        height: 28px;
+        padding: 8px;
+    }
+
+    summary {
+        width: 48px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Better index menu on mobile */
+    .index {
+        padding: 16px;
+        font-size: 0.95rem;
+    }
+
+    /* Responsive iframes */
+    iframe {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Footer adjustments */
+    .footer {
+        padding: 30px 16px;
+        font-size: 0.9rem;
     }
 }
