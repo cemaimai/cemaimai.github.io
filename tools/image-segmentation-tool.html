@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像分割ツール | Image Segmentation Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root {
+            /* Premium Color Palette (Dark Mode - Default) */
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #e0e7ff;
+            --secondary: #ec4899;
+            --secondary-hover: #db2777;
+
+            --bg-color: #0f172a;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --card-backdrop: blur(16px);
+
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-accent: #818cf8;
+
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.5);
+
+            --blob-1: rgba(79, 70, 229, 0.4);
+            --blob-2: rgba(236, 72, 153, 0.3);
+
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --hover-bg: rgba(255, 255, 255, 0.05);
+            --preview-bg: repeating-conic-gradient(rgba(255, 255, 255, 0.05) 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+        }
+
+        body.light-mode {
+            --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            /* Light blue gradient */
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(255, 255, 255, 0.8);
+            --card-shadow: 0 8px 32px 0 rgba(14, 165, 233, 0.15);
+            /* Soft blue shadow */
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-accent: #0284c7;
+            /* Sky blue accent */
+
+            --blob-1: rgba(125, 211, 252, 0.5);
+            /* Sky blue blob */
+            --blob-2: rgba(147, 197, 253, 0.4);
+            /* Blue blob */
+
+            --input-bg: rgba(255, 255, 255, 0.8);
+            --input-border: rgba(14, 165, 233, 0.2);
+            --hover-bg: rgba(14, 165, 233, 0.05);
+            --preview-bg: repeating-conic-gradient(rgba(14, 165, 233, 0.05) 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 3rem 1.5rem;
+            min-height: 100vh;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        /* Decorative background blobs */
+        body::before,
+        body::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(100px);
+            opacity: 0.5;
+            transition: background 0.5s ease;
+        }
+
+        body::before {
+            top: -10%;
+            left: -10%;
+            width: 40vw;
+            height: 40vw;
+            background: var(--blob-1);
+        }
+
+        body::after {
+            bottom: -10%;
+            right: -10%;
+            width: 30vw;
+            height: 30vw;
+            background: var(--blob-2);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #a5b4fc, #fbcfe8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: var(--card-backdrop);
+            -webkit-backdrop-filter: var(--card-backdrop);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1rem;
+        }
+
+        h2 svg {
+            color: var(--text-accent);
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-md);
+            padding: 3.5rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(79, 70, 229, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .upload-area:hover::before,
+        .upload-area.dragover::before {
+            transform: translateX(100%);
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.2) inset;
+        }
+
+        .upload-area svg {
+            width: 56px;
+            height: 56px;
+            color: var(--text-accent);
+            margin-bottom: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-area:hover svg {
+            transform: scale(1.1) translateY(-5px);
+        }
+
+        .upload-area p {
+            color: var(--text-main);
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .upload-area .browse-btn {
+            color: var(--text-accent);
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Image Info & Preview */
+        .image-info-container {
+            display: none;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .image-preview-wrapper {
+            flex: 0 0 240px;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            background: repeating-conic-gradient(rgba(255, 255, 255, 0.05) 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #originalPreview {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        #originalPreview:hover {
+            transform: scale(1.05);
+        }
+
+        .image-metadata {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .info-filename-row,
+        .info-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--card-border);
+            transition: background 0.2s ease;
+        }
+
+        body.light-mode .info-filename-row,
+        body.light-mode .info-item {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .info-filename-row:hover,
+        .info-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .info-filename-row {
+            margin-bottom: 1rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        /* Settings Area */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            color: var(--text-main);
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--input-bg);
+            padding: 0.5rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--input-border);
+        }
+
+        .input-group span {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        input[type="number"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+            background: var(--card-bg);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            user-select: none;
+            padding: 0.5rem 0;
+            transition: color 0.2s;
+        }
+
+        .checkbox-group:hover {
+            color: #fff;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-muted);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .checkbox-group input[type="checkbox"]:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .checkbox-group input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 1px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .calculation-result {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(236, 72, 153, 0.05));
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .calculation-result::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .calc-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .calc-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-main);
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover:not(:disabled)::after {
+            opacity: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #818cf8 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary) 0%, #f472b6 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            box-shadow: none;
+        }
+
+        /* Result Area */
+        .result-area {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1rem;
+        }
+
+        .result-header h2 {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .preview-grid {
+            display: grid;
+            gap: 16px;
+            background: var(--preview-bg);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--card-border);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .preview-item {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .preview-item:hover {
+            transform: scale(1.05) translateY(-5px);
+            z-index: 10;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+            border-color: var(--primary-light);
+        }
+
+        .preview-item img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .preview-index {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(15, 23, 42, 0.8);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .image-info-container {
+                flex-direction: column;
+            }
+
+            .image-preview-wrapper {
+                flex: none;
+                width: 100%;
+                max-width: 300px;
+                margin: 0 auto;
+                position: relative;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .result-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: var(--card-backdrop);
+            -webkit-backdrop-filter: var(--card-backdrop);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            background: var(--hover-bg);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <button class="theme-toggle" id="btnThemeToggle" title="ライト/ダークモード切替">
+                <svg id="iconMoon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                    </path>
+                </svg>
+                <svg id="iconSun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                    </path>
+                </svg>
+            </button>
+            <h1>画像分割ツール</h1>
+            <p class="subtitle">ブラウザ上で画像を等分割してダウンロードできます</p>
+        </header>
+
+        <!-- Upload Section -->
+        <section class="card">
+            <h2>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                1. 画像の選択
+            </h2>
+            <div class="upload-area" id="dropZone">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                    </path>
+                </svg>
+                <p>ここへ画像をドラッグ＆ドロップ、または <span class="browse-btn">ファイルを選択</span></p>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+
+            <div class="image-info-container" id="imageInfoSection">
+                <div class="image-preview-wrapper" style="position: relative;">
+                    <img id="originalPreview" alt="Original Image Preview">
+                    <button id="btnReselect" class="btn btn-primary"
+                        style="position: absolute; bottom: 8px; left: 8px; right: 8px; padding: 0.5rem; font-size: 0.8rem; opacity: 0.9;">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        別の画像を選択
+                    </button>
+                </div>
+                <div class="image-metadata">
+                    <div class="info-filename-row" title="ファイル名">
+                        <div class="info-label">ファイル名</div>
+                        <div class="info-value" id="infoFilename">-</div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">解像度 (W × H)</div>
+                            <div class="info-value" id="infoResolution">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">サイズ</div>
+                            <div class="info-value" id="infoSize">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">アスペクト比</div>
+                            <div class="info-value" id="infoAspect">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section class="card" id="settingsSection" style="opacity: 0.5; pointer-events: none;">
+            <h2>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                    </path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                2. 分割設定
+            </h2>
+
+            <div class="settings-grid">
+                <div>
+                    <div class="form-group">
+                        <label>分割数 (行 × 列)</label>
+                        <div class="input-group">
+                            <input type="number" id="inputRows" min="1" max="100" value="3" title="行数">
+                            <span>行</span>
+                            <span>×</span>
+                            <input type="number" id="inputCols" min="1" max="100" value="3" title="列数">
+                            <span>列</span>
+                        </div>
+                    </div>
+
+                    <div class="calculation-result">
+                        <div class="calc-text">分割予定: 合計 <span class="calc-value" id="calcTotal">9</span> 枚</div>
+                        <div class="calc-text">元画像1枚あたり: 約 <span class="calc-value" id="calcOrigSize">-</span> px</div>
+                    </div>
+                </div>
+
+                <!-- Adding toggle for locking aspect ratio -->
+                <div>
+                    <div class="form-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">出力サイズ (幅 × 高さ px)</label>
+                            <label class="checkbox-group" style="padding-top: 0; font-size: 0.85rem;">
+                                <input type="checkbox" id="lockAspect" checked>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                                    </path>
+                                </svg>
+                                縦横比を固定
+                            </label>
+                        </div>
+                        <div class="input-group">
+                            <input type="number" id="outputWidth" min="1" max="8000" placeholder="幅">
+                            <span>×</span>
+                            <input type="number" id="outputHeight" min="1" max="8000" placeholder="高さ">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="transparentBg" checked>
+                            背景を透過する (PNG形式)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" id="btnSplit" disabled>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5">
+                        </path>
+                    </svg>
+                    画像を分割する
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="card result-area" id="resultSection">
+            <div class="result-header">
+                <h2>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    3. プレビューとダウンロード
+                </h2>
+                <button class="btn btn-secondary" id="btnDownloadZip">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    一括ダウンロード (ZIP)
+                </button>
+            </div>
+
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                各画像上で右クリック（スマホでは長押し）して個別に保存することもできます。
+            </p>
+
+            <div class="preview-grid" id="previewGrid">
+                <!-- Split images will be appended here -->
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const imageInfoSection = document.getElementById('imageInfoSection');
+        const originalPreview = document.getElementById('originalPreview');
+        const btnReselect = document.getElementById('btnReselect');
+        const settingsSection = document.getElementById('settingsSection');
+        const resultSection = document.getElementById('resultSection');
+        const btnSplit = document.getElementById('btnSplit');
+        const btnDownloadZip = document.getElementById('btnDownloadZip');
+        const previewGrid = document.getElementById('previewGrid');
+
+        // Inputs
+        const inputRows = document.getElementById('inputRows');
+        const inputCols = document.getElementById('inputCols');
+        const outputWidth = document.getElementById('outputWidth');
+        const outputHeight = document.getElementById('outputHeight');
+        const transparentBg = document.getElementById('transparentBg');
+        const lockAspect = document.getElementById('lockAspect');
+
+        // Display elements
+        const calcTotal = document.getElementById('calcTotal');
+        const calcOrigSize = document.getElementById('calcOrigSize');
+
+        // State
+        let currentImage = null;
+        let currentFile = null;
+        let splitBlobs = []; // Arrays of {blob, name}
+
+
+        // Theme Toggle Logic
+        const btnThemeToggle = document.getElementById('btnThemeToggle');
+        const iconMoon = document.getElementById('iconMoon');
+        const iconSun = document.getElementById('iconSun');
+
+        // Check system preference on load
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            document.body.classList.add('light-mode');
+            iconSun.style.display = 'none';
+            iconMoon.style.display = 'block';
+        }
+
+        btnThemeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            iconSun.style.display = isLight ? 'none' : 'block';
+            iconMoon.style.display = isLight ? 'block' : 'none';
+        });
+
+        // --- Drag and Drop Logic ---
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+            // clear value so selecting the same file triggers change again
+            e.target.value = '';
+        });
+
+        btnReselect.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // --- File Handling & Preview ---
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('画像ファイルを選択してください。');
+                return;
+            }
+
+            currentFile = file;
+            const url = URL.createObjectURL(file);
+
+            const img = new Image();
+            img.onload = () => {
+                currentImage = img;
+                originalPreview.src = url;
+
+                // Show metadata
+                document.getElementById('infoFilename').textContent = file.name;
+                document.getElementById('infoResolution').textContent = `${img.width} × ${img.height}`;
+                document.getElementById('infoSize').textContent = formatBytes(file.size);
+
+                const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+                const r = gcd(img.width, img.height);
+                document.getElementById('infoAspect').textContent = `${img.width / r}:${img.height / r}`;
+
+                // Update UI
+                dropZone.style.display = 'none';
+                imageInfoSection.style.display = 'flex';
+                settingsSection.style.opacity = '1';
+                settingsSection.style.pointerEvents = 'auto';
+                btnSplit.disabled = false;
+                resultSection.style.display = 'none';
+
+                updateCalculations();
+            };
+            img.src = url;
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        // --- Setting Calculations ---
+        let isUpdatingAspect = false;
+
+        function updateCalculations() {
+            if (!currentImage) return;
+
+            const rows = parseInt(inputRows.value) || 1;
+            const cols = parseInt(inputCols.value) || 1;
+
+            calcTotal.textContent = rows * cols;
+            const segW = Math.floor(currentImage.width / cols);
+            const segH = Math.floor(currentImage.height / rows);
+            calcOrigSize.textContent = `${segW} × ${segH}`;
+
+            // Auto fill output sizes based on current col/row
+            if (!isUpdatingAspect) {
+                outputWidth.value = segW;
+                outputHeight.value = segH;
+            }
+        }
+
+        inputRows.addEventListener('input', updateCalculations);
+        inputCols.addEventListener('input', updateCalculations);
+
+        // --- Aspect Ratio Logic ---
+        outputWidth.addEventListener('input', () => {
+            if (!currentImage || !lockAspect.checked || isUpdatingAspect) return;
+            const cols = parseInt(inputCols.value) || 1;
+            const rows = parseInt(inputRows.value) || 1;
+            const segW = currentImage.width / cols;
+            const segH = currentImage.height / rows;
+            const aspect = segH / segW;
+
+            const w = parseInt(outputWidth.value);
+            if (w) {
+                isUpdatingAspect = true;
+                outputHeight.value = Math.max(1, Math.round(w * aspect));
+                isUpdatingAspect = false;
+            }
+        });
+
+        outputHeight.addEventListener('input', () => {
+            if (!currentImage || !lockAspect.checked || isUpdatingAspect) return;
+            const cols = parseInt(inputCols.value) || 1;
+            const rows = parseInt(inputRows.value) || 1;
+            const segW = currentImage.width / cols;
+            const segH = currentImage.height / rows;
+            const aspect = segW / segH;
+
+            const h = parseInt(outputHeight.value);
+            if (h) {
+                isUpdatingAspect = true;
+                outputWidth.value = Math.max(1, Math.round(h * aspect));
+                isUpdatingAspect = false;
+            }
+        });
+
+        // --- Split Logic ---
+        btnSplit.addEventListener('click', async () => {
+            if (!currentImage) return;
+
+            btnSplit.disabled = true;
+            btnSplit.innerHTML = '処理中...';
+
+            // Small delay to allow UI to update
+            setTimeout(async () => {
+                await processSplit();
+
+                btnSplit.disabled = false;
+                btnSplit.innerHTML = `
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                画像を再分割する
+            `;
+            }, 50);
+        });
+
+        async function processSplit() {
+            const rows = parseInt(inputRows.value) || 1;
+            const cols = parseInt(inputCols.value) || 1;
+            const isTransparent = transparentBg.checked;
+            const outputFormat = isTransparent ? 'image/png' : 'image/jpeg';
+            const ext = isTransparent ? 'png' : 'jpg';
+
+            const srcW = currentImage.width / cols;
+            const srcH = currentImage.height / rows;
+
+            const outW = parseInt(outputWidth.value) || srcW;
+            const outH = parseInt(outputHeight.value) || srcH;
+
+            previewGrid.innerHTML = '';
+            previewGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            splitBlobs = [];
+
+            const baseFilename = currentFile.name.substring(0, currentFile.name.lastIndexOf('.')) || 'image';
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = outW;
+                    canvas.height = outH;
+                    const ctx = canvas.getContext('2d');
+
+                    // Fill background for jpeg
+                    if (!isTransparent) {
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, outW, outH);
+                    }
+
+                    ctx.drawImage(
+                        currentImage,
+                        c * srcW, r * srcH, srcW, srcH, // Source
+                        0, 0, outW, outH // Destination
+                    );
+
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, outputFormat, 0.95));
+                    const filename = `${baseFilename}_${r + 1}_${c + 1}.${ext}`;
+
+                    splitBlobs.push({ blob, name: filename });
+
+                    // Add to preview
+                    const url = URL.createObjectURL(blob);
+                    const item = document.createElement('div');
+                    item.className = 'preview-item';
+                    item.innerHTML = `
+                    <div class="preview-index">${r + 1}-${c + 1}</div>
+                    <img src="${url}" title="${filename}" />
+                `;
+                    previewGrid.appendChild(item);
+                }
+            }
+
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- ZIP Download Logic ---
+        btnDownloadZip.addEventListener('click', () => {
+            if (splitBlobs.length === 0) return;
+
+            const zip = new JSZip();
+            splitBlobs.forEach(item => {
+                zip.file(item.name, item.blob);
+            });
+
+            const baseFilename = currentFile.name.substring(0, currentFile.name.lastIndexOf('.')) || 'image';
+
+            btnDownloadZip.disabled = true;
+            btnDownloadZip.textContent = 'ZIP作成中...';
+
+            zip.generateAsync({ type: "blob" })
+                .then(function (content) {
+                    saveAs(content, `${baseFilename}_split.zip`);
+                    btnDownloadZip.disabled = false;
+                    btnDownloadZip.innerHTML = `
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    一括ダウンロード (ZIP)
+                `;
+                });
+        });
+
+    </script>
+</body>
+
+</html>
