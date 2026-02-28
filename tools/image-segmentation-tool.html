@@ -11,14 +11,18 @@
     <style>
         :root {
             /* Premium Color Palette (Dark Mode - Default) */
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --primary-light: #e0e7ff;
+            --primary: #0284c7;
+            /* Blue 600 */
+            --primary-hover: #0369a1;
+            /* Blue 700 */
+            --primary-light: #e0f2fe;
+            /* Light blue */
             --secondary: #ec4899;
+            /* Pink/Purple accent */
             --secondary-hover: #db2777;
 
             --bg-color: #0f172a;
-            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #082f49 100%);
 
             --card-bg: rgba(255, 255, 255, 0.03);
             --card-border: rgba(255, 255, 255, 0.1);
@@ -27,14 +31,15 @@
 
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --text-accent: #818cf8;
+            --text-accent: #38bdf8;
+            /* Sky blue 400 */
 
             --radius-lg: 16px;
             --radius-md: 10px;
-            --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.5);
+            --focus-ring: 0 0 0 3px rgba(14, 165, 233, 0.5);
 
-            --blob-1: rgba(79, 70, 229, 0.4);
-            --blob-2: rgba(236, 72, 153, 0.3);
+            --blob-1: rgba(14, 165, 233, 0.4);
+            --blob-2: rgba(56, 189, 248, 0.3);
 
             --input-bg: rgba(0, 0, 0, 0.3);
             --input-border: rgba(255, 255, 255, 0.1);
@@ -43,8 +48,8 @@
         }
 
         body.light-mode {
-            --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-            /* Light blue gradient */
+            --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            /* White/Light gray gradient */
             --card-bg: rgba(255, 255, 255, 0.7);
             --card-border: rgba(255, 255, 255, 0.8);
             --card-shadow: 0 8px 32px 0 rgba(14, 165, 233, 0.15);
@@ -125,7 +130,7 @@
         h1 {
             font-size: 2.5rem;
             font-weight: 800;
-            background: linear-gradient(to right, #a5b4fc, #fbcfe8);
+            background: linear-gradient(to right, #38bdf8, #7dd3fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
@@ -191,7 +196,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(45deg, transparent, rgba(79, 70, 229, 0.1), transparent);
+            background: linear-gradient(45deg, transparent, rgba(14, 165, 233, 0.1), transparent);
             transform: translateX(-100%);
             transition: transform 0.6s;
         }
@@ -204,8 +209,8 @@
         .upload-area:hover,
         .upload-area.dragover {
             border-color: var(--primary);
-            background: rgba(79, 70, 229, 0.1);
-            box-shadow: 0 0 20px rgba(79, 70, 229, 0.2) inset;
+            background: rgba(14, 165, 233, 0.1);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2) inset;
         }
 
         .upload-area svg {
@@ -372,7 +377,7 @@
         input[type="number"]:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
             background: var(--card-bg);
         }
 
@@ -422,7 +427,7 @@
         .calculation-result {
             margin-top: 1.5rem;
             padding: 1.25rem;
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(236, 72, 153, 0.05));
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(56, 189, 248, 0.05));
             border-radius: var(--radius-md);
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
@@ -496,14 +501,14 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, #818cf8 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #38bdf8 100%);
             color: white;
             flex: 1;
         }
 
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
         }
 
         .btn-secondary {
