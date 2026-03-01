@@ -392,7 +392,7 @@
         }
 
         .checkbox-group:hover {
-            color: #fff;
+            color: var(--text-main);
         }
 
         .checkbox-group input[type="checkbox"] {
@@ -824,8 +824,41 @@
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="checkbox-group">
                             <input type="checkbox" id="transparentBg" checked>
-                            背景を透過する (PNG形式)
+                            背景を透過する (PNG出力)
                         </label>
+                    </div>
+
+                    <div class="form-group" id="colorRemovalGroup" style="margin-top: 0.75rem;">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="removeColorBg">
+                            指定色を透過にする
+                        </label>
+                        <div id="colorRemovalSettings"
+                            style="display: none; margin-top: 1rem; padding: 1rem; background: var(--input-bg); border-radius: var(--radius-md); border: 1px solid var(--input-border);">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                <label
+                                    style="font-size: 0.9rem; color: var(--text-muted); white-space: nowrap;">透過する色:</label>
+                                <input type="color" id="removeColor" value="#ffffff"
+                                    style="width: 48px; height: 36px; border: 2px solid var(--input-border); border-radius: 8px; cursor: pointer; background: none; padding: 2px;">
+                                <span id="removeColorHex"
+                                    style="font-size: 0.85rem; color: var(--text-muted); font-family: monospace;">#ffffff</span>
+                            </div>
+                            <div>
+                                <label
+                                    style="font-size: 0.9rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                                    許容値 (しきい値):
+                                    <span id="toleranceValue"
+                                        style="font-weight: 600; color: var(--text-main);">30</span>
+                                </label>
+                                <input type="range" id="toleranceSlider" min="0" max="255" value="30"
+                                    style="width: 100%; margin-top: 0.5rem; accent-color: var(--primary);">
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                    <span>厳密 (0)</span>
+                                    <span>ゆるめ (255)</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -894,6 +927,14 @@
         const transparentBg = document.getElementById('transparentBg');
         const lockAspect = document.getElementById('lockAspect');
 
+        // Color removal elements
+        const removeColorBg = document.getElementById('removeColorBg');
+        const colorRemovalSettings = document.getElementById('colorRemovalSettings');
+        const removeColor = document.getElementById('removeColor');
+        const removeColorHex = document.getElementById('removeColorHex');
+        const toleranceSlider = document.getElementById('toleranceSlider');
+        const toleranceValueDisplay = document.getElementById('toleranceValue');
+
         // Display elements
         const calcTotal = document.getElementById('calcTotal');
         const calcOrigSize = document.getElementById('calcOrigSize');
@@ -902,6 +943,23 @@
         let currentImage = null;
         let currentFile = null;
         let splitBlobs = []; // Arrays of {blob, name}
+
+        // --- Color Removal UI Logic ---
+        removeColorBg.addEventListener('change', () => {
+            colorRemovalSettings.style.display = removeColorBg.checked ? 'block' : 'none';
+            // Auto-enable transparent output when color removal is checked
+            if (removeColorBg.checked) {
+                transparentBg.checked = true;
+            }
+        });
+
+        removeColor.addEventListener('input', () => {
+            removeColorHex.textContent = removeColor.value;
+        });
+
+        toleranceSlider.addEventListener('input', () => {
+            toleranceValueDisplay.textContent = toleranceSlider.value;
+        });
 
 
         // Theme Toggle Logic
@@ -986,6 +1044,13 @@
                 settingsSection.style.pointerEvents = 'auto';
                 btnSplit.disabled = false;
                 resultSection.style.display = 'none';
+
+                // Default transparent background to true if it's a PNG
+                if (file.type === 'image/png') {
+                    transparentBg.checked = true;
+                } else {
+                    transparentBg.checked = false;
+                }
 
                 updateCalculations();
             };
@@ -1103,8 +1168,12 @@
                     canvas.height = outH;
                     const ctx = canvas.getContext('2d');
 
-                    // Fill background for jpeg
-                    if (!isTransparent) {
+                    // If transparent is selected and the image has transparency,
+                    // clearing the canvas ensures it stays transparent.
+                    // For JPEG, or non-transparent, fill with white background.
+                    if (isTransparent) {
+                        ctx.clearRect(0, 0, outW, outH);
+                    } else {
                         ctx.fillStyle = '#FFFFFF';
                         ctx.fillRect(0, 0, outW, outH);
                     }
@@ -1115,6 +1184,31 @@
                         0, 0, outW, outH // Destination
                     );
 
+                    // Color removal: make specified color transparent
+                    if (removeColorBg.checked) {
+                        const hex = removeColor.value;
+                        const targetR = parseInt(hex.substring(1, 3), 16);
+                        const targetG = parseInt(hex.substring(3, 5), 16);
+                        const targetB = parseInt(hex.substring(5, 7), 16);
+                        const tolerance = parseInt(toleranceSlider.value);
+
+                        const imageData = ctx.getImageData(0, 0, outW, outH);
+                        const data = imageData.data;
+
+                        for (let p = 0; p < data.length; p += 4) {
+                            const dr = data[p] - targetR;
+                            const dg = data[p + 1] - targetG;
+                            const db = data[p + 2] - targetB;
+                            const distance = Math.sqrt(dr * dr + dg * dg + db * db);
+
+                            if (distance <= tolerance) {
+                                data[p + 3] = 0; // Set alpha to 0 (transparent)
+                            }
+                        }
+
+                        ctx.putImageData(imageData, 0, 0);
+                    }
+
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, outputFormat, 0.95));
                     const filename = `${baseFilename}_${r + 1}_${c + 1}.${ext}`;
 
@@ -1124,10 +1218,16 @@
                     const url = URL.createObjectURL(blob);
                     const item = document.createElement('div');
                     item.className = 'preview-item';
+
+                    // Add a checkered background class dynamically so transparency is visible in the preview
+                    if (isTransparent) {
+                        item.style.background = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 16 16\'%3E%3Cpath fill=\'%23e5e7eb\' d=\'M0 0h8v8H0zM8 8h8v8H8z\'/%3E%3Cpath fill=\'%23f3f4f6\' d=\'M8 0h8v8H8zM0 8h8v8H0z\'/%3E%3C/svg%3E")';
+                    }
+
                     item.innerHTML = `
-                    <div class="preview-index">${r + 1}-${c + 1}</div>
-                    <img src="${url}" title="${filename}" />
-                `;
+                        <div class="preview-index">${r + 1}-${c + 1}</div>
+                        <img src="${url}" title="${filename}" />
+                    `;
                     previewGrid.appendChild(item);
                 }
             }
