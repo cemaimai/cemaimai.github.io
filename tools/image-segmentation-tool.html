@@ -688,6 +688,33 @@
             width: 20px;
             height: 20px;
         }
+
+        .help-link {
+            position: absolute;
+            top: 0;
+            right: 50px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: var(--card-backdrop);
+            -webkit-backdrop-filter: var(--card-backdrop);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .help-link:hover {
+            transform: scale(1.1);
+            background: var(--hover-bg);
+        }
     </style>
 </head>
 
@@ -707,6 +734,8 @@
                     </path>
                 </svg>
             </button>
+            <a class="help-link" href="https://github.com/cemaimai/cemaimai.github.io/blob/main/tools/README.md"
+                target="_blank" title="使い方・ヘルプ">?</a>
             <h1>画像分割ツール</h1>
             <p class="subtitle">ブラウザ上で画像を等分割してダウンロードできます</p>
         </header>
